@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="18122" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="BYZ-38-t0r">
+    <device id="retina5_9" orientation="portrait" appearance="light"/>
+    <dependencies>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="18093"/>
+        <capability name="Safe area layout guides" minToolsVersion="9.0"/>
+        <capability name="System colors in document resources" minToolsVersion="11.0"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <scenes>
+        <!--View Controller-->
+        <scene sceneID="tne-QT-ifu">
+            <objects>
+                <viewController id="BYZ-38-t0r" customClass="ViewController" customModule="PineTimeCompanion" customModuleProvider="target" sceneMemberID="viewController">
+                    <view key="view" contentMode="scaleToFill" id="8bC-Xf-vdC">
+                        <rect key="frame" x="0.0" y="0.0" width="375" height="812"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <button opaque="NO" clipsSubviews="YES" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="AdD-gF-dMC">
+                                <rect key="frame" x="71" y="380" width="233" height="52"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="32"/>
+                                <state key="normal" title="Set Current Time"/>
+                                <connections>
+                                    <action selector="setCurrentTimeButtonPressed:" destination="BYZ-38-t0r" eventType="touchDown" id="HCy-2o-pWF"/>
+                                </connections>
+                            </button>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Disconnected" textAlignment="center" lineBreakMode="wordWrap" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="ymJ-5H-7O8">
+                                <rect key="frame" x="92" y="104" width="191" height="38.333333333333343"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="32"/>
+                                <nil key="textColor"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                        </subviews>
+                        <viewLayoutGuide key="safeArea" id="6Tk-OE-BBY"/>
+                        <color key="backgroundColor" systemColor="systemBackgroundColor"/>
+                        <constraints>
+                            <constraint firstItem="AdD-gF-dMC" firstAttribute="centerY" secondItem="8bC-Xf-vdC" secondAttribute="centerY" id="Mx9-bE-RZo"/>
+                            <constraint firstItem="AdD-gF-dMC" firstAttribute="centerX" secondItem="8bC-Xf-vdC" secondAttribute="centerX" id="QNK-pK-6O1"/>
+                            <constraint firstItem="AdD-gF-dMC" firstAttribute="centerX" secondItem="ymJ-5H-7O8" secondAttribute="centerX" id="T68-Re-j00"/>
+                            <constraint firstItem="ymJ-5H-7O8" firstAttribute="leading" secondItem="6Tk-OE-BBY" secondAttribute="leading" constant="92" id="Vsy-4T-DAU"/>
+                            <constraint firstItem="AdD-gF-dMC" firstAttribute="leading" secondItem="6Tk-OE-BBY" secondAttribute="leading" constant="71" id="haR-gt-0Fx"/>
+                            <constraint firstItem="6Tk-OE-BBY" firstAttribute="bottom" secondItem="AdD-gF-dMC" secondAttribute="bottom" constant="346" id="igs-y8-qM7"/>
+                            <constraint firstItem="ymJ-5H-7O8" firstAttribute="top" secondItem="6Tk-OE-BBY" secondAttribute="top" constant="60" id="ynb-Bw-3Bb"/>
+                        </constraints>
+                    </view>
+                    <connections>
+                        <outlet property="connectionLabel" destination="ymJ-5H-7O8" id="W0t-Tl-IOD"/>
+                        <outlet property="setCurrentTimeButton" destination="AdD-gF-dMC" id="Ize-OF-Xjl"/>
+                    </connections>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="dkx-z0-nzr" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="34.399999999999999" y="64.285714285714292"/>
+        </scene>
+    </scenes>
+    <resources>
+        <systemColor name="systemBackgroundColor">
+            <color white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+        </systemColor>
+    </resources>
+</document>
