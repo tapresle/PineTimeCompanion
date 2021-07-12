@@ -7,11 +7,14 @@
 
 import UIKit
 import CoreBluetooth
+import MediaPlayer
 
 class ViewController: UIViewController, CBPeripheralDelegate, CBCentralManagerDelegate {
   private var centralManager: CBCentralManager!
   private var peripheral: CBPeripheral!
   private var characteristic: CBCharacteristic!
+  private var alertCharacteristic: CBCharacteristic!
+  let audioInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo
   
   @IBOutlet weak var setCurrentTimeButton: UIButton!
   @IBOutlet weak var connectionLabel: UILabel!
@@ -30,17 +33,23 @@ class ViewController: UIViewController, CBPeripheralDelegate, CBCentralManagerDe
   }
   
   @objc func appMovedToBackground() {
-    centralManager.cancelPeripheralConnection(self.peripheral)
+    if self.peripheral != nil {
+      centralManager.cancelPeripheralConnection(self.peripheral)
+    }
   }
   
   @objc func appMovedToForeground() {
-    print("Central scanning for", WatchPeripheral.watchGATTFirmwareUpdateUUID);
-    centralManager.scanForPeripherals(withServices: [WatchPeripheral.watchGATTFirmwareUpdateUUID],
-                                      options: [CBCentralManagerScanOptionAllowDuplicatesKey : true])
+    if self.centralManager != nil {
+      startScanning(self.centralManager)
+    }
   }
   
   // If we're powered on, start scanning
   func centralManagerDidUpdateState(_ central: CBCentralManager) {
+    startScanning(central)
+  }
+  
+  func startScanning(_ central: CBCentralManager) {
     print("Central state update")
     if central.state != .poweredOn {
       print("Central is not powered on")
@@ -80,8 +89,6 @@ class ViewController: UIViewController, CBPeripheralDelegate, CBCentralManagerDe
       self.connectionLabel.text = "Connected to \(peripheral.name!)"
       self.connectionLabel.numberOfLines = 0
       self.connectionLabel.sizeToFit()
-      
-      print(self.connectionLabel.text!)
       peripheral.discoverServices([])
     }
   }
@@ -94,7 +101,16 @@ class ViewController: UIViewController, CBPeripheralDelegate, CBCentralManagerDe
           print("GATT current time service found")
           //Now kick off discovery of characteristics
           peripheral.discoverCharacteristics([], for: service)
-          return
+        }
+        
+        if service.uuid == WatchPeripheral.gattAlertNotificationServiceUUID {
+          print("GATT Alert Service found")
+          peripheral.discoverCharacteristics([], for: service)
+        }
+        
+        if service.uuid == WatchPeripheral.watchGATTMusicServiceUUID {
+          print("GATT InfiniTime Music Service found")
+          peripheral.discoverCharacteristics([], for: service)
         }
       }
     }
@@ -105,8 +121,35 @@ class ViewController: UIViewController, CBPeripheralDelegate, CBCentralManagerDe
     if let characteristics = service.characteristics {
       for characteristic in characteristics {
         if characteristic.uuid == WatchPeripheral.gattCurrentTimeCharacteristicUUID {
-          print("GATT characteristic found")
+          print("GATT current time characteristic found")
           self.characteristic = characteristic
+        }
+        if characteristic.uuid == WatchPeripheral.gattNewAlertCharacteristicUUID {
+          print("GATT new alert characteristic found")
+          //sendAlert(peripheral: self.peripheral, characteristic: characteristic)
+          self.alertCharacteristic = characteristic
+          sendAlert(peripheral: self.peripheral, characteristic: self.alertCharacteristic, text: "Connected to iPhone")
+        }
+        if characteristic.uuid == WatchPeripheral.watchGATTArtistChacteristicUUID {
+          if let mediaItem = loadMusicFromAppleMusic() {
+            let artist = mediaItem.value(forProperty: MPMediaItemPropertyArtist) as! String
+            let array: [UInt8] = Array(artist.utf8)
+            peripheral.writeValue(NSData(bytes: array, length: array.count) as Data, for: characteristic, type: .withResponse)
+          }
+        }
+        if characteristic.uuid == WatchPeripheral.watchGATTTrackChacteristicUUID {
+          if let mediaItem = loadMusicFromAppleMusic() {
+            let track = mediaItem.value(forProperty: MPMediaItemPropertyTitle) as! String
+            let array: [UInt8] = Array(track.utf8)
+            peripheral.writeValue(NSData(bytes: array, length: array.count) as Data, for: characteristic, type: .withResponse)
+          }
+        }
+        if characteristic.uuid == WatchPeripheral.watchGATTAlbumChacteristicUUID {
+          if let mediaItem = loadMusicFromAppleMusic() {
+            let album = mediaItem.value(forProperty: MPMediaItemPropertyAlbumTitle) as! String
+            let array: [UInt8] = Array(album.utf8)
+            peripheral.writeValue(NSData(bytes: array, length: array.count) as Data, for: characteristic, type: .withResponse)
+          }
         }
       }
     }
@@ -130,6 +173,21 @@ class ViewController: UIViewController, CBPeripheralDelegate, CBCentralManagerDe
     
     peripheral.writeValue(currentTimeArray_data as Data, for: characteristic, type: .withResponse)
     print("Current Time Set")
+  }
+  
+  func sendAlert(peripheral: CBPeripheral, characteristic: CBCharacteristic, text: String) {
+    let message = "   " + text // No idea why Infinitime truncates the first 3 bytes
+    let array: [UInt8] = Array(message.utf8)
+    peripheral.writeValue(NSData(bytes: array, length: array.count) as Data, for: characteristic, type: .withResponse)
+  }
+  
+  // TOOD: Need access to Spotify API to retrieve data from them apparently.
+  func loadMusicFromAppleMusic() -> MPMediaItem? {
+    let player = MPMusicPlayerController.systemMusicPlayer
+    if let mediaItem = player.nowPlayingItem {
+      return mediaItem
+    }
+    return nil
   }
   
   
