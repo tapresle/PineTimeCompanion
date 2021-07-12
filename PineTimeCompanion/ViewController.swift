@@ -14,6 +14,14 @@ class ViewController: UIViewController, CBPeripheralDelegate, CBCentralManagerDe
   private var peripheral: CBPeripheral!
   private var characteristic: CBCharacteristic!
   private var alertCharacteristic: CBCharacteristic!
+  private var musicNotifyCharacteristic: CBCharacteristic!
+  private var musicStatusCharacteristic: CBCharacteristic!
+  private var musicTrackCharacteristic: CBCharacteristic!
+  private var musicArtistCharacteristic: CBCharacteristic!
+  private var musicAlbumCharacteristic: CBCharacteristic!
+  private var musicPositionCharacteristic: CBCharacteristic!
+  private var musicTotalLengthCharacteristic: CBCharacteristic!
+  
   let audioInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo
   
   @IBOutlet weak var setCurrentTimeButton: UIButton!
@@ -34,7 +42,7 @@ class ViewController: UIViewController, CBPeripheralDelegate, CBCentralManagerDe
   
   @objc func appMovedToBackground() {
     if self.peripheral != nil {
-      centralManager.cancelPeripheralConnection(self.peripheral)
+      //centralManager.cancelPeripheralConnection(self.peripheral)
     }
   }
   
@@ -126,32 +134,73 @@ class ViewController: UIViewController, CBPeripheralDelegate, CBCentralManagerDe
         }
         if characteristic.uuid == WatchPeripheral.gattNewAlertCharacteristicUUID {
           print("GATT new alert characteristic found")
-          //sendAlert(peripheral: self.peripheral, characteristic: characteristic)
           self.alertCharacteristic = characteristic
           sendAlert(peripheral: self.peripheral, characteristic: self.alertCharacteristic, text: "Connected to iPhone")
         }
+        if characteristic.uuid == WatchPeripheral.watchGATTMusicStatusChacteristicUUID {
+          self.musicStatusCharacteristic = characteristic
+        }
+        if characteristic.uuid == WatchPeripheral.watchGATTMusicNotifyChacteristicUUID {
+          self.musicNotifyCharacteristic = characteristic
+          peripheral.setNotifyValue(true, for: characteristic)
+        }
         if characteristic.uuid == WatchPeripheral.watchGATTArtistChacteristicUUID {
-          if let mediaItem = loadMusicFromAppleMusic() {
-            let artist = mediaItem.value(forProperty: MPMediaItemPropertyArtist) as! String
-            let array: [UInt8] = Array(artist.utf8)
-            peripheral.writeValue(NSData(bytes: array, length: array.count) as Data, for: characteristic, type: .withResponse)
-          }
+          self.musicArtistCharacteristic = characteristic
         }
         if characteristic.uuid == WatchPeripheral.watchGATTTrackChacteristicUUID {
-          if let mediaItem = loadMusicFromAppleMusic() {
-            let track = mediaItem.value(forProperty: MPMediaItemPropertyTitle) as! String
-            let array: [UInt8] = Array(track.utf8)
-            peripheral.writeValue(NSData(bytes: array, length: array.count) as Data, for: characteristic, type: .withResponse)
-          }
+          self.musicTrackCharacteristic = characteristic
         }
         if characteristic.uuid == WatchPeripheral.watchGATTAlbumChacteristicUUID {
-          if let mediaItem = loadMusicFromAppleMusic() {
-            let album = mediaItem.value(forProperty: MPMediaItemPropertyAlbumTitle) as! String
-            let array: [UInt8] = Array(album.utf8)
-            peripheral.writeValue(NSData(bytes: array, length: array.count) as Data, for: characteristic, type: .withResponse)
-          }
+          self.musicAlbumCharacteristic = characteristic
+        }
+        if characteristic.uuid == WatchPeripheral.watchGATTPositionChacteristicUUID {
+          self.musicPositionCharacteristic = characteristic
+        }
+        if characteristic.uuid == WatchPeripheral.watchGATTTotalLengthChacteristicUUID {
+          self.musicTotalLengthCharacteristic = characteristic
         }
       }
+    }
+  }
+  
+  func peripheral(_ peripheral: CBPeripheral,
+                  didUpdateValueFor characteristic: CBCharacteristic,
+                  error: Error?) {
+    if characteristic.value![0] == WatchPeripheral.watchGATTMusicAppActiveChacteristicID {
+      print("Music app active")
+      loadMusicFromAppleMusic()
+      print(AVAudioSession.sharedInstance().isOtherAudioPlaying)
+      if AVAudioSession.sharedInstance().isOtherAudioPlaying {
+        peripheral.writeValue(NSData(bytes: Array("1".utf8), length: Array("1".utf8).count) as Data, for: self.musicStatusCharacteristic, type: .withResponse)
+      } else {
+        peripheral.writeValue(NSData(bytes: [], length: 0) as Data, for: self.musicStatusCharacteristic, type: .withResponse)
+      }
+    }
+    if characteristic.value![0] == WatchPeripheral.watchGATTMusicAppReverseChacteristicID {
+      print("Rewind")
+      let player = MPMusicPlayerController.systemMusicPlayer
+      player.skipToPreviousItem()
+      loadMusicFromAppleMusic()
+    }
+    if characteristic.value![0] == WatchPeripheral.watchGATTMusicAppForwardChacteristicID {
+      print("Forward")
+      let player = MPMusicPlayerController.systemMusicPlayer
+      player.skipToNextItem()
+      loadMusicFromAppleMusic()
+    }
+    if characteristic.value![0] == WatchPeripheral.watchGATTMusicAppPlayChacteristicID {
+      print("Play")
+      let player = MPMusicPlayerController.systemMusicPlayer
+      player.play()
+      peripheral.writeValue(NSData(bytes: Array("1".utf8), length: Array("1".utf8).count) as Data, for: self.musicStatusCharacteristic, type: .withResponse)
+      loadMusicFromAppleMusic()
+    }
+    if characteristic.value![0] == WatchPeripheral.watchGATTMusicAppPauseChacteristicID {
+      print("Pause")
+      let player = MPMusicPlayerController.systemMusicPlayer
+      player.pause()
+      loadMusicFromAppleMusic()
+      peripheral.writeValue(NSData(bytes: [], length: 0) as Data, for: self.musicStatusCharacteristic, type: .withResponse)
     }
   }
   
@@ -182,14 +231,19 @@ class ViewController: UIViewController, CBPeripheralDelegate, CBCentralManagerDe
   }
   
   // TOOD: Need access to Spotify API to retrieve data from them apparently.
-  func loadMusicFromAppleMusic() -> MPMediaItem? {
+  func loadMusicFromAppleMusic() {
     let player = MPMusicPlayerController.systemMusicPlayer
     if let mediaItem = player.nowPlayingItem {
-      return mediaItem
+      let artist = mediaItem.value(forProperty: MPMediaItemPropertyArtist) as! String
+      let album = mediaItem.value(forProperty: MPMediaItemPropertyAlbumTitle) as! String
+      let track = mediaItem.value(forProperty: MPMediaItemPropertyTitle) as! String
+
+      peripheral.writeValue(NSData(bytes: Array(artist.utf8), length: Array(artist.utf8).count) as Data, for: self.musicArtistCharacteristic, type: .withResponse)
+      peripheral.writeValue(NSData(bytes: Array(album.utf8), length: Array(album.utf8).count) as Data, for: self.musicAlbumCharacteristic, type: .withResponse)
+      peripheral.writeValue(NSData(bytes: Array(track.utf8), length: Array(track.utf8).count) as Data, for: self.musicTrackCharacteristic, type: .withResponse)
+      peripheral.writeValue(NSData(bytes: withUnsafeBytes(of: Int32(player.currentPlaybackTime).bigEndian, Array.init), length: 4) as Data, for: self.musicPositionCharacteristic, type: .withResponse)
+      peripheral.writeValue(NSData(bytes: withUnsafeBytes(of: Int32(mediaItem.playbackDuration).bigEndian, Array.init), length: 4) as Data, for: self.musicTotalLengthCharacteristic, type: .withResponse)
     }
-    return nil
   }
-  
-  
 }
 
